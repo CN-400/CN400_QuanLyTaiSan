@@ -115,17 +115,11 @@ export async function syncRepairToGoogleSheets(
   request: RepairRequest,
   settings: AppSettings
 ): Promise<SyncResult> {
-  if (!settings.webAppUrl) {
-    return {
-      success: false,
-      message: 'Chưa cấu hình Google Apps Script Web App URL. Dữ liệu đã được lưu tạm ở trình duyệt.',
-    };
-  }
-
+  const url = settings?.webAppUrl || '';
   try {
-    const result = await executeSheetsApiCall(settings.webAppUrl, true, {
+    const result = await executeSheetsApiCall(url, true, {
       action: 'createRepair',
-      managerEmail: settings.managerEmail || '',
+      managerEmail: settings?.managerEmail || '',
       data: request,
     });
 
@@ -149,17 +143,11 @@ export async function syncProcurementToGoogleSheets(
   request: ProcurementRequest,
   settings: AppSettings
 ): Promise<SyncResult> {
-  if (!settings.webAppUrl) {
-    return {
-      success: false,
-      message: 'Chưa cấu hình Google Apps Script Web App URL. Dữ liệu đã được lưu tạm ở trình duyệt.',
-    };
-  }
-
+  const url = settings?.webAppUrl || '';
   try {
-    const result = await executeSheetsApiCall(settings.webAppUrl, true, {
+    const result = await executeSheetsApiCall(url, true, {
       action: 'createProcurement',
-      managerEmail: settings.managerEmail || '',
+      managerEmail: settings?.managerEmail || '',
       data: request,
     });
 
@@ -188,12 +176,9 @@ export async function updateStatusInGoogleSheets(
   note?: string,
   settings?: AppSettings
 ): Promise<SyncResult> {
-  if (!settings?.webAppUrl) {
-    return { success: false, message: 'Chưa cấu hình Web App URL.' };
-  }
-
+  const url = settings?.webAppUrl || '';
   try {
-    const result = await executeSheetsApiCall(settings.webAppUrl, true, {
+    const result = await executeSheetsApiCall(url, true, {
       action: 'updateStatus',
       type,
       data: { id, status, handler, completionDate, note },
@@ -213,12 +198,9 @@ export async function updateStatusInGoogleSheets(
  * Fetch all sheets data
  */
 export async function fetchAllFromGoogleSheets(settings: AppSettings): Promise<SyncResult> {
-  if (!settings.webAppUrl) {
-    return { success: false, message: 'Chưa cấu hình Web App URL.' };
-  }
-
+  const url = settings?.webAppUrl || '';
   try {
-    const result = await executeSheetsApiCall(settings.webAppUrl, false);
+    const result = await executeSheetsApiCall(url, false);
 
     if (result && (result.status === 'success' || result.status === 'ok')) {
       return {

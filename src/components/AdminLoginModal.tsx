@@ -96,8 +96,17 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             )}
 
             <div className="mt-2 text-[11px] text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-200 flex items-center justify-between">
-              <span>Mật khẩu mặc định ban đầu:</span>
-              <code className="bg-white px-2 py-0.5 rounded border text-blue-700 font-bold font-mono">admin123</code>
+              <span>Mật khẩu mặc định:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPasswordInput(currentPassword || 'admin123');
+                  setErrorMsg('');
+                }}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-300 font-bold font-mono transition-colors text-[11px]"
+              >
+                Tự điền ({currentPassword || 'admin123'})
+              </button>
             </div>
           </div>
 

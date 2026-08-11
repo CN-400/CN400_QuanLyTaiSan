@@ -67,9 +67,9 @@ export default function App() {
     }, 4500);
   };
 
-  const handleUpdateSettings = (newSettings: AppSettings) => {
-    setSettings(newSettings);
-    saveAppSettings(newSettings);
+  const handleUpdateSettings = async (newSettings: AppSettings) => {
+    const saved = await saveAppSettings(newSettings);
+    setSettings(saved);
   };
 
   const handleResetData = () => {

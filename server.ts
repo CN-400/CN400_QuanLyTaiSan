@@ -24,16 +24,20 @@ function loadSharedSettings() {
   };
 }
 
+let inMemorySettings = loadSharedSettings();
+
+function getSharedSettings() {
+  return inMemorySettings;
+}
+
 function saveSharedSettings(newSettings: any) {
+  inMemorySettings = { ...inMemorySettings, ...newSettings };
   try {
-    const current = loadSharedSettings();
-    const updated = { ...current, ...newSettings };
-    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updated, null, 2), 'utf-8');
-    return updated;
+    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(inMemorySettings, null, 2), 'utf-8');
   } catch (err) {
     console.error('Failed to write shared_settings.json:', err);
-    return newSettings;
   }
+  return inMemorySettings;
 }
 
 async function startServer() {
@@ -44,7 +48,7 @@ async function startServer() {
 
   // API Route: Get Shared Settings
   app.get('/api/settings', (req, res) => {
-    const settings = loadSharedSettings();
+    const settings = getSharedSettings();
     res.json({ status: 'success', settings });
   });
 
@@ -65,7 +69,7 @@ async function startServer() {
       
       // Auto-fallback to server shared settings if client webAppUrl is empty
       if (!webAppUrl || !webAppUrl.trim()) {
-        const shared = loadSharedSettings();
+        const shared = getSharedSettings();
         webAppUrl = shared.webAppUrl;
       }
 
@@ -123,7 +127,7 @@ async function startServer() {
 
       // Auto-fallback to server shared settings if client webAppUrl is empty
       if (!webAppUrl || !webAppUrl.trim()) {
-        const shared = loadSharedSettings();
+        const shared = getSharedSettings();
         webAppUrl = shared.webAppUrl;
       }
 

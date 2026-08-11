@@ -62,10 +62,18 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
     }
   };
 
-  const handleSaveUrl = () => {
+  const [saving, setSaving] = useState<boolean>(false);
+
+  const handleSaveUrl = async () => {
+    if (!inputUrl.trim()) {
+      showToast('Vui lòng dán URL Google Apps Script Web App trước khi lưu!', 'error');
+      return;
+    }
+    setSaving(true);
     const updated = { ...settings, webAppUrl: inputUrl.trim(), managerEmail: managerEmail.trim() };
-    onSaveSettings(updated);
-    showToast('Đã lưu cấu hình kết nối Google Apps Script & Email thông báo!', 'success');
+    await onSaveSettings(updated);
+    setSaving(false);
+    showToast('Đã lưu & đồng bộ cấu hình thành công tới máy chủ (mọi điện thoại sẽ tự động kết nối)!', 'success');
   };
 
   return (
@@ -132,9 +140,10 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveUrl}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs transition-all shadow"
+                  disabled={saving}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs transition-all shadow disabled:opacity-50"
                 >
-                  Lưu Cấu Hình
+                  {saving ? 'Đang lưu...' : 'Lưu Cấu Hình'}
                 </button>
               </div>
             </div>

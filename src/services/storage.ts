@@ -6,17 +6,17 @@ const PROCUREMENT_STORAGE_KEY = 'vtb_asset_procurement_requests_v1';
 const SETTINGS_STORAGE_KEY = 'vtb_asset_app_settings_v1';
 
 export const getAppSettings = (): AppSettings => {
-  const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-  if (saved) {
-    try {
+  try {
+    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (saved) {
       const parsed = JSON.parse(saved);
       return {
         adminPassword: 'admin123',
         ...parsed,
       };
-    } catch (e) {
-      console.error('Failed to parse app settings', e);
     }
+  } catch (e) {
+    console.error('Failed to parse app settings from localStorage:', e);
   }
   return {
     webAppUrl: '',
@@ -27,15 +27,34 @@ export const getAppSettings = (): AppSettings => {
   };
 };
 
-export const saveAppSettings = (settings: AppSettings): void => {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+export const saveAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.warn('Could not write to localStorage on mobile device:', e);
+  }
 
   // Sync to backend server so mobile phones and all devices get connected automatically
-  fetch('/api/settings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ settings }),
-  }).catch((err) => console.warn('Could not sync settings to server', err));
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.settings) {
+        try {
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.settings));
+        } catch (e) {}
+        return data.settings;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync settings to server:', err);
+  }
+
+  return settings;
 };
 
 /**
@@ -54,15 +73,17 @@ export const fetchServerSettings = async (): Promise<AppSettings | null> => {
         const merged: AppSettings = {
           ...currentLocal,
           ...serverSettings,
-          webAppUrl: serverSettings.webAppUrl || currentLocal.webAppUrl,
-          managerEmail: serverSettings.managerEmail || currentLocal.managerEmail,
+          webAppUrl: serverSettings.webAppUrl || currentLocal.webAppUrl || '',
+          managerEmail: serverSettings.managerEmail || currentLocal.managerEmail || '',
         };
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+        try {
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+        } catch (e) {}
         return merged;
       }
     }
   } catch (err) {
-    console.warn('Could not fetch server settings', err);
+    console.warn('Could not fetch server settings:', err);
   }
   return null;
 };

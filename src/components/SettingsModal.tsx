@@ -44,20 +44,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const [saving, setSaving] = useState<boolean>(false);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminPassword.trim()) {
       showToast('Mật khẩu Admin không được để trống!', 'error');
       return;
     }
 
-    onSaveSettings({
+    setSaving(true);
+    await onSaveSettings({
       ...settings,
       bankBranchName: bankBranchName.trim(),
       webAppUrl: webAppUrl.trim(),
       managerEmail: managerEmail.trim(),
       adminPassword: adminPassword.trim(),
     });
+    setSaving(false);
     showToast('Đã lưu & đồng bộ cấu hình tới tất cả thiết bị (bao gồm điện thoại)!', 'success');
     onClose();
   };
