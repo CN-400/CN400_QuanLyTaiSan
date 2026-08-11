@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, RotateCcw, Building2, Link2, Mail, Lock, LogOut, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { X, Settings, RotateCcw, Building2, Link2, Mail, Lock, LogOut, ShieldCheck, Eye, EyeOff, Smartphone, Share2, CheckCircle2 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { resetDataToSample } from '../services/storage';
 
@@ -28,6 +28,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminPassword, setAdminPassword] = useState<string>(settings.adminPassword || 'admin123');
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
+  const handleCopyMobileLink = () => {
+    if (!webAppUrl.trim()) {
+      showToast('Vui lòng nhập Google Apps Script Web App URL trước!', 'error');
+      return;
+    }
+    const origin = window.location.origin;
+    const shareUrl = `${origin}/?webAppUrl=${encodeURIComponent(webAppUrl.trim())}&email=${encodeURIComponent(managerEmail.trim())}`;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl);
+      showToast('Đã sao chép Link tự động cấu hình cho Điện thoại!', 'success');
+    } else {
+      showToast('Vui lòng copy thủ công link trên thanh địa chỉ', 'info');
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminPassword.trim()) {
@@ -42,7 +58,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       managerEmail: managerEmail.trim(),
       adminPassword: adminPassword.trim(),
     });
-    showToast('Đã cập nhật cấu hình hệ thống & mật khẩu Admin!', 'success');
+    showToast('Đã lưu & đồng bộ cấu hình tới tất cả thiết bị (bao gồm điện thoại)!', 'success');
     onClose();
   };
 
@@ -109,6 +125,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ⚠️ Bạn đang nhập link Thư viện (Library) hoặc Editor. Vui lòng bấm "Triển khai" &gt; "Ứng dụng Web" trong Apps Script và copy link đuôi <code>/exec</code>!
               </p>
             )}
+
+            {/* Mobile Connectivity Sync Box */}
+            <div className="mt-2 p-3 bg-blue-50/80 rounded-xl border border-blue-200 text-blue-950 space-y-2">
+              <div className="flex items-start space-x-2">
+                <Smartphone className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-tight">
+                  <p className="font-bold text-blue-900">Kết nối Tự động trên Điện thoại & Tất cả thiết bị:</p>
+                  <p className="text-blue-700 mt-0.5">
+                    Khi Admin bấm <strong>"Lưu Thay Đổi"</strong>, máy chủ sẽ tự lưu cấu hình kết nối. Điện thoại chỉ cần truy cập web ứng dụng là sẽ tự kết nối thành công!
+                  </p>
+                </div>
+              </div>
+
+              {webAppUrl && (
+                <button
+                  type="button"
+                  onClick={handleCopyMobileLink}
+                  className="w-full py-1.5 px-3 bg-white hover:bg-blue-100 text-blue-800 font-bold rounded-lg text-xs border border-blue-300 transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Sao chép Link chia sẻ kèm cấu hình sẵn cho Điện thoại</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div>

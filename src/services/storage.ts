@@ -29,6 +29,66 @@ export const getAppSettings = (): AppSettings => {
 
 export const saveAppSettings = (settings: AppSettings): void => {
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+
+  // Sync to backend server so mobile phones and all devices get connected automatically
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings }),
+  }).catch((err) => console.warn('Could not sync settings to server', err));
+};
+
+/**
+ * Fetch global shared settings from server backend (enables mobile phones to get configured automatically)
+ */
+export const fetchServerSettings = async (): Promise<AppSettings | null> => {
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.settings) {
+        const serverSettings = data.settings;
+        const currentLocal = getAppSettings();
+
+        // Merge server settings
+        const merged: AppSettings = {
+          ...currentLocal,
+          ...serverSettings,
+          webAppUrl: serverSettings.webAppUrl || currentLocal.webAppUrl,
+          managerEmail: serverSettings.managerEmail || currentLocal.managerEmail,
+        };
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch server settings', err);
+  }
+  return null;
+};
+
+/**
+ * Check URL query string for pre-configured Apps Script URL (e.g., ?webAppUrl=... or ?scriptUrl=...)
+ */
+export const checkAndApplyUrlConfig = (): AppSettings => {
+  const current = getAppSettings();
+  if (typeof window === 'undefined') return current;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramUrl = urlParams.get('webAppUrl') || urlParams.get('scriptUrl') || urlParams.get('url');
+  const paramEmail = urlParams.get('managerEmail') || urlParams.get('email');
+
+  if (paramUrl || paramEmail) {
+    const updated: AppSettings = {
+      ...current,
+      webAppUrl: paramUrl ? paramUrl.trim() : current.webAppUrl,
+      managerEmail: paramEmail ? paramEmail.trim() : current.managerEmail,
+    };
+    saveAppSettings(updated);
+    return updated;
+  }
+
+  return current;
 };
 
 export const getRepairRequests = (): RepairRequest[] => {

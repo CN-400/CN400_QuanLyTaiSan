@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveTab, AppSettings, ProcurementRequest, RepairRequest } from './types';
 import {
+  checkAndApplyUrlConfig,
+  fetchServerSettings,
   getAppSettings,
   getProcurementRequests,
   getRepairRequests,
@@ -40,6 +42,19 @@ export default function App() {
   useEffect(() => {
     setRepairRequests(getRepairRequests());
     setProcurementRequests(getProcurementRequests());
+
+    // 1. Check if URL contains query parameters (e.g., ?webAppUrl=...)
+    const urlConfig = checkAndApplyUrlConfig();
+    if (urlConfig.webAppUrl) {
+      setSettings(urlConfig);
+    }
+
+    // 2. Automatically fetch shared server configuration (allows mobile phones to auto-connect)
+    fetchServerSettings().then((serverSettings) => {
+      if (serverSettings) {
+        setSettings(serverSettings);
+      }
+    });
   }, []);
 
   const showToastHandler = (

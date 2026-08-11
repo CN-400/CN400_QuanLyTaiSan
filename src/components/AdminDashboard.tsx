@@ -370,7 +370,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Dành Cho Cán Bộ Quản Lý & Xử Lý</span>
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 mt-1">
-              BẢNG QUẢN LÝ TÀI SẢN TOÀN NHÁNH
+              BẢNG QUẢN LÝ TÀI SẢN - CN NINH BÌNH
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
               Cập nhật trạng thái xử lý, gán cán bộ phân công, in phiếu đề nghị và đồng bộ dữ liệu Google Sheets

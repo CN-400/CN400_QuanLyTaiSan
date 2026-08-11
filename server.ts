@@ -1,6 +1,40 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
+
+const SETTINGS_FILE_PATH = path.join(process.cwd(), 'shared_settings.json');
+
+// Memory cache + File storage for shared server settings
+function loadSharedSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_FILE_PATH)) {
+      const content = fs.readFileSync(SETTINGS_FILE_PATH, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error('Failed to read shared_settings.json:', err);
+  }
+  return {
+    webAppUrl: '',
+    bankBranchName: 'NGÂN HÀNG TMCP VIETINBANK-CN NINH BÌNH',
+    managerEmail: '',
+    adminPassword: 'admin123',
+    autoSync: true,
+  };
+}
+
+function saveSharedSettings(newSettings: any) {
+  try {
+    const current = loadSharedSettings();
+    const updated = { ...current, ...newSettings };
+    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updated, null, 2), 'utf-8');
+    return updated;
+  } catch (err) {
+    console.error('Failed to write shared_settings.json:', err);
+    return newSettings;
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -8,22 +42,50 @@ async function startServer() {
 
   app.use(express.json());
 
+  // API Route: Get Shared Settings
+  app.get('/api/settings', (req, res) => {
+    const settings = loadSharedSettings();
+    res.json({ status: 'success', settings });
+  });
+
+  // API Route: Update Shared Settings
+  app.post('/api/settings', (req, res) => {
+    const { settings } = req.body;
+    if (!settings) {
+      return res.status(400).json({ status: 'error', message: 'Thiếu thông tin cài đặt' });
+    }
+    const updated = saveSharedSettings(settings);
+    res.json({ status: 'success', settings: updated });
+  });
+
   // API Route: Forward request to Google Apps Script Web App
   app.post('/api/sheets/proxy', async (req, res) => {
     try {
-      const { webAppUrl, payload } = req.body;
-      if (!webAppUrl) {
-        return res.status(400).json({ status: 'error', message: 'Chưa cấu hình Google Apps Script Web App URL.' });
+      let { webAppUrl, payload } = req.body;
+      
+      // Auto-fallback to server shared settings if client webAppUrl is empty
+      if (!webAppUrl || !webAppUrl.trim()) {
+        const shared = loadSharedSettings();
+        webAppUrl = shared.webAppUrl;
       }
 
-      if (webAppUrl.includes('/macros/library/') || webAppUrl.includes('/edit')) {
+      if (!webAppUrl || !webAppUrl.trim()) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Chưa cấu hình Google Apps Script Web App URL trên máy tính hoặc máy chủ.' 
+        });
+      }
+
+      const targetUrl = webAppUrl.trim();
+
+      if (targetUrl.includes('/macros/library/') || targetUrl.includes('/edit')) {
         return res.status(400).json({
           status: 'error',
           message: 'URL không đúng định dạng Web App! Bạn đang dùng link Library hoặc link Chỉnh sửa. Vui lòng bấm "Triển khai (Deploy)" -> "Ứng dụng Web" trong Apps Script và copy link dạng https://script.google.com/macros/s/.../exec'
         });
       }
 
-      const response = await fetch(webAppUrl, {
+      const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -57,12 +119,24 @@ async function startServer() {
   // API Route: Fetch data from Google Apps Script Web App
   app.get('/api/sheets/proxy', async (req, res) => {
     try {
-      const webAppUrl = req.query.webAppUrl as string;
-      if (!webAppUrl) {
-        return res.status(400).json({ status: 'error', message: 'Chưa cung cấp Google Apps Script Web App URL.' });
+      let webAppUrl = req.query.webAppUrl as string;
+
+      // Auto-fallback to server shared settings if client webAppUrl is empty
+      if (!webAppUrl || !webAppUrl.trim()) {
+        const shared = loadSharedSettings();
+        webAppUrl = shared.webAppUrl;
       }
 
-      if (webAppUrl.includes('/macros/library/') || webAppUrl.includes('/edit')) {
+      if (!webAppUrl || !webAppUrl.trim()) {
+        return res.status(400).json({ 
+          status: 'error', 
+          message: 'Chưa cung cấp Google Apps Script Web App URL.' 
+        });
+      }
+
+      const urlTrimmed = webAppUrl.trim();
+
+      if (urlTrimmed.includes('/macros/library/') || urlTrimmed.includes('/edit')) {
         return res.status(400).json({
           status: 'error',
           message: 'URL không đúng định dạng Web App! Bạn đang dùng link Library hoặc link Chỉnh sửa. Vui lòng bấm "Triển khai (Deploy)" -> "Ứng dụng Web" trong Apps Script và copy link dạng https://script.google.com/macros/s/.../exec'
@@ -71,7 +145,7 @@ async function startServer() {
 
       let targetUrl;
       try {
-        targetUrl = new URL(webAppUrl);
+        targetUrl = new URL(urlTrimmed);
       } catch (e) {
         return res.status(400).json({
           status: 'error',
