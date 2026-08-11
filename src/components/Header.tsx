@@ -12,6 +12,8 @@ import {
   Building2,
   Calendar,
   Clock,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { ActiveTab, AppSettings } from '../types';
 
@@ -22,6 +24,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   repairCount: number;
   procurementCount: number;
+  isAdminLoggedIn?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   repairCount,
   procurementCount,
+  isAdminLoggedIn = false,
 }) => {
   const [time, setTime] = useState<string>('');
   const [date, setDate] = useState<string>('');
@@ -140,10 +144,24 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick Settings Icon */}
             <button
               onClick={onOpenSettings}
-              className="p-2 bg-blue-900/60 hover:bg-blue-800 rounded-lg border border-blue-700/60 transition-colors text-blue-100 hover:text-white"
-              title="Cài đặt hệ thống"
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border transition-all ${
+                isAdminLoggedIn
+                  ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900'
+                  : 'bg-blue-900/60 border-blue-700/60 text-blue-100 hover:bg-blue-800'
+              }`}
+              title={isAdminLoggedIn ? 'Cài đặt hệ thống (Đã đăng nhập Admin)' : 'Cài đặt hệ thống (Yêu cầu mật khẩu Admin)'}
             >
-              <Settings className="w-5 h-5" />
+              {isAdminLoggedIn ? (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span className="text-[11px] font-bold hidden sm:inline">Admin</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-amber-300" />
+                  <Settings className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </div>

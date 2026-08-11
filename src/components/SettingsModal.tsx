@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, RotateCcw, Building2, Link2, Check, Shield } from 'lucide-react';
+import { X, Settings, RotateCcw, Building2, Link2, Mail, Lock, LogOut, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { AppSettings } from '../types';
 import { resetDataToSample } from '../services/storage';
 
@@ -8,6 +8,7 @@ interface SettingsModalProps {
   onSaveSettings: (newSettings: AppSettings) => void;
   onResetData: () => void;
   onClose: () => void;
+  onLogoutAdmin?: () => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -16,21 +17,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveSettings,
   onResetData,
   onClose,
+  onLogoutAdmin,
   showToast,
 }) => {
   const [bankBranchName, setBankBranchName] = useState<string>(
     settings.bankBranchName || 'NGÂN HÀNG TMCP VIETINBANK-CN NINH BÌNH'
   );
   const [webAppUrl, setWebAppUrl] = useState<string>(settings.webAppUrl || '');
+  const [managerEmail, setManagerEmail] = useState<string>(settings.managerEmail || '');
+  const [adminPassword, setAdminPassword] = useState<string>(settings.adminPassword || 'admin123');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminPassword.trim()) {
+      showToast('Mật khẩu Admin không được để trống!', 'error');
+      return;
+    }
+
     onSaveSettings({
       ...settings,
       bankBranchName: bankBranchName.trim(),
       webAppUrl: webAppUrl.trim(),
+      managerEmail: managerEmail.trim(),
+      adminPassword: adminPassword.trim(),
     });
-    showToast('Đã lưu cấu hình ứng dụng!', 'success');
+    showToast('Đã cập nhật cấu hình hệ thống & mật khẩu Admin!', 'success');
     onClose();
   };
 
@@ -49,7 +61,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="bg-[#002060] text-white p-5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Settings className="w-6 h-6 text-amber-300" />
-            <h3 className="text-lg font-bold">Cài Đặt Hệ Thống</h3>
+            <div>
+              <h3 className="text-lg font-bold">Cài Đặt Hệ Thống</h3>
+              <span className="inline-flex items-center space-x-1 text-[11px] text-emerald-300 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/40">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span>Quyền Quản Trị Viên (Admin)</span>
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -59,7 +77,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 space-y-5 text-xs sm:text-sm">
+        <form onSubmit={handleSave} className="p-6 space-y-4 text-xs sm:text-sm max-h-[80vh] overflow-y-auto">
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center space-x-1">
               <Building2 className="w-3.5 h-3.5 text-blue-600" />
@@ -93,7 +111,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center space-x-1">
+              <Mail className="w-3.5 h-3.5 text-blue-600" />
+              <span>Email Cán bộ Quản lý nhận thông báo</span>
+            </label>
+            <input
+              type="text"
+              value={managerEmail}
+              onChange={(e) => setManagerEmail(e.target.value)}
+              placeholder="qlts.ninhbinh@vietinbank.vn (Nhiều email cách nhau bằng dấu phẩy)"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-600 outline-none text-xs"
+            />
+            <p className="mt-1 text-[11px] text-gray-500">
+              Tự động gửi mail thông báo kèm toàn bộ chi tiết phiếu cho Cán bộ Quản lý khi có đề nghị mới.
+            </p>
+          </div>
+
+          {/* Admin Password Configuration */}
           <div className="pt-2 border-t border-gray-200">
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center space-x-1">
+              <Lock className="w-3.5 h-3.5 text-amber-600" />
+              <span>Đổi Mật khẩu Admin Quản trị</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Nhập mật khẩu quản trị mới..."
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-amber-300 focus:ring-2 focus:ring-amber-500 outline-none text-xs font-bold bg-amber-50/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Mật khẩu này dùng để ngăn cán bộ thông thường tự ý thay đổi cấu hình hệ thống.
+            </p>
+          </div>
+
+          <div className="pt-2 border-t border-gray-200 space-y-2">
             <button
               type="button"
               onClick={handleResetSampleData}
@@ -102,6 +164,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <RotateCcw className="w-4 h-4" />
               <span>Khôi phục Dữ liệu Mẫu Ban đầu</span>
             </button>
+
+            {onLogoutAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onLogoutAdmin();
+                  showToast('Đã đăng xuất quyền Admin!', 'info');
+                  onClose();
+                }}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center space-x-2 border border-slate-300"
+              >
+                <LogOut className="w-4 h-4 text-slate-600" />
+                <span>Đăng Xuất Quyền Admin</span>
+              </button>
+            )}
           </div>
 
           <div className="pt-3 border-t border-gray-200 flex justify-end space-x-2">
@@ -124,3 +201,4 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     </div>
   );
 };
+

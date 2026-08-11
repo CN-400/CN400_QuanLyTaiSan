@@ -125,6 +125,7 @@ export async function syncRepairToGoogleSheets(
   try {
     const result = await executeSheetsApiCall(settings.webAppUrl, true, {
       action: 'createRepair',
+      managerEmail: settings.managerEmail || '',
       data: request,
     });
 
@@ -158,6 +159,7 @@ export async function syncProcurementToGoogleSheets(
   try {
     const result = await executeSheetsApiCall(settings.webAppUrl, true, {
       action: 'createProcurement',
+      managerEmail: settings.managerEmail || '',
       data: request,
     });
 

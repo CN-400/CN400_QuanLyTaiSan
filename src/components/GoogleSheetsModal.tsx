@@ -31,6 +31,7 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [inputUrl, setInputUrl] = useState<string>(settings.webAppUrl || '');
+  const [managerEmail, setManagerEmail] = useState<string>(settings.managerEmail || '');
   const [testing, setTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -62,9 +63,9 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
   };
 
   const handleSaveUrl = () => {
-    const updated = { ...settings, webAppUrl: inputUrl.trim() };
+    const updated = { ...settings, webAppUrl: inputUrl.trim(), managerEmail: managerEmail.trim() };
     onSaveSettings(updated);
-    showToast('Đã lưu cấu hình kết nối Google Apps Script!', 'success');
+    showToast('Đã lưu cấu hình kết nối Google Apps Script & Email thông báo!', 'success');
   };
 
   return (
@@ -133,9 +134,22 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                   onClick={handleSaveUrl}
                   className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs transition-all shadow"
                 >
-                  Lưu Link URL
+                  Lưu Cấu Hình
                 </button>
               </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800">
+              <label className="block text-xs font-bold text-amber-300 mb-1">
+                📧 Email Cán bộ Quản lý nhận thông báo tự động khi có đề nghị mới:
+              </label>
+              <input
+                type="text"
+                value={managerEmail}
+                onChange={(e) => setManagerEmail(e.target.value)}
+                placeholder="Ví dụ: qlts.ninhbinh@vietinbank.vn (Phân cách dấu phẩy nếu nhiều email)"
+                className="w-full px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:ring-2 focus:ring-amber-400 outline-none"
+              />
             </div>
 
             {(inputUrl.includes('/macros/library/') || inputUrl.includes('/edit')) && (

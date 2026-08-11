@@ -1,8 +1,12 @@
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * GOOGLE APPS SCRIPT BACKEND API FOR ASSET MANAGEMENT
  * Tên dự án: Hệ thống Quản lý Đăng ký Sửa chữa & Mua sắm Tài sản
- * Tương thích Google Sheets + Web App API
+ * Đơn vị: VIETINBANK CHI NHÁNH NINH BÌNH
+ * Tính năng: Lưu dữ liệu Google Sheets + Tự động gửi Email thông báo cho Cán bộ Quản lý
  */
+
+// Email nhận thông báo mặc định (Phân cách bằng dấu phẩy nếu gửi cho nhiều người)
+var DEFAULT_MANAGER_EMAILS = "qlts.ninhbinh@vietinbank.vn";
 
 function doGet(e) {
   try {
@@ -29,7 +33,7 @@ function doGet(e) {
     
     return responseJSON({
       status: "success",
-      message: "Google Apps Script Web App API đang hoạt động bình thường!",
+      message: "Google Apps Script Web App API VietinBank đang hoạt động bình thường!",
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -46,6 +50,11 @@ function doPost(e) {
     var contents = JSON.parse(e.postData.contents);
     var action = contents.action;
     var data = contents.data;
+    // Lấy email từ cài đặt web app gửi lên, nếu trống thì dùng mặc định
+    var recipientEmail = (contents.managerEmail && contents.managerEmail.trim()) 
+      ? contents.managerEmail.trim() 
+      : DEFAULT_MANAGER_EMAILS;
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
     // Tự động khởi tạo hoặc lấy sheet
@@ -63,6 +72,7 @@ function doPost(e) {
     
     // 1. Thêm mới Yêu cầu Sửa chữa
     if (action === "createRepair") {
+      var createdAtStr = new Date().toLocaleString("vi-VN");
       scSheet.appendRow([
         data.id || "",
         data.fullName || "",
@@ -76,13 +86,22 @@ function doPost(e) {
         data.handler || "",
         data.completionDate || "",
         data.note || "",
-        new Date().toLocaleString("vi-VN")
+        createdAtStr
       ]);
-      return responseJSON({ status: "success", message: "Đã lưu phiếu sửa chữa vào Google Sheets thành công!", id: data.id });
+
+      // Tự động gửi mail thông báo cho Cán bộ Quản lý
+      sendEmailNotificationForRepair(recipientEmail, data, createdAtStr);
+
+      return responseJSON({ 
+        status: "success", 
+        message: "Đã lưu phiếu sửa chữa vào Google Sheets & gửi email thông báo thành công!", 
+        id: data.id 
+      });
     }
     
     // 2. Thêm mới Yêu cầu Mua sắm
     if (action === "createProcurement") {
+      var createdAtStr = new Date().toLocaleString("vi-VN");
       msSheet.appendRow([
         data.id || "",
         data.fullName || "",
@@ -98,9 +117,17 @@ function doPost(e) {
         data.status || "Đề xuất",
         data.completionDate || "",
         data.note || "",
-        new Date().toLocaleString("vi-VN")
+        createdAtStr
       ]);
-      return responseJSON({ status: "success", message: "Đã lưu phiếu mua sắm vào Google Sheets thành công!", id: data.id });
+
+      // Tự động gửi mail thông báo cho Cán bộ Quản lý
+      sendEmailNotificationForProcurement(recipientEmail, data, createdAtStr);
+
+      return responseJSON({ 
+        status: "success", 
+        message: "Đã lưu phiếu mua sắm vào Google Sheets & gửi email thông báo thành công!", 
+        id: data.id 
+      });
     }
     
     // 3. Cập nhật trạng thái xử lý
@@ -113,13 +140,11 @@ function doPost(e) {
       for (var i = 1; i < rows.length; i++) {
         if (rows[i][0] == data.id) {
           if (isRepair) {
-            // Col 9: Trạng thái, Col 10: Cán bộ, Col 11: Ngày hoàn thành, Col 12: Ghi chú
             if (data.status) targetSheet.getRange(i + 1, 9).setValue(data.status);
             if (data.handler !== undefined) targetSheet.getRange(i + 1, 10).setValue(data.handler);
             if (data.completionDate !== undefined) targetSheet.getRange(i + 1, 11).setValue(data.completionDate);
             if (data.note !== undefined) targetSheet.getRange(i + 1, 12).setValue(data.note);
           } else {
-            // Col 11: Cán bộ, Col 12: Trạng thái, Col 13: Ngày hoàn thành, Col 14: Ghi chú
             if (data.handler !== undefined) targetSheet.getRange(i + 1, 11).setValue(data.handler);
             if (data.status) targetSheet.getRange(i + 1, 12).setValue(data.status);
             if (data.completionDate !== undefined) targetSheet.getRange(i + 1, 13).setValue(data.completionDate);
@@ -141,6 +166,92 @@ function doPost(e) {
   }
 }
 
+/**
+ * Gửi email thông báo Đề nghị Sửa chữa tới Cán bộ Quản lý
+ */
+function sendEmailNotificationForRepair(recipientEmail, data, timestamp) {
+  if (!recipientEmail || recipientEmail.trim() === "") return;
+  try {
+    var subject = "[VIETINBANK NINH BÌNH] Đề nghị SỬA CHỮA mới - " + (data.id || "") + " (" + (data.fullName || "") + ")";
+    var htmlBody = '<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; border: 1px solid #002060; border-radius: 8px; overflow: hidden;">' +
+      '<div style="background-color: #002060; padding: 16px; text-align: center; color: #ffffff;">' +
+      '<h2 style="margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px;">VIETINBANK CHI NHÁNH NINH BÌNH</h2>' +
+      '<p style="margin: 4px 0 0 0; font-size: 13px; color: #facc15; font-weight: bold;">THÔNG BÁO ĐỀ NGHỊ SỬA CHỮA TÀI SẢN MỚI</p>' +
+      '</div>' +
+      '<div style="padding: 20px; line-height: 1.6; font-size: 14px;">' +
+      '<p>Kính gửi <b>Cán bộ Quản lý / Bộ phận Quản trị Tài sản</b>,</p>' +
+      '<p>Hệ thống vừa tiếp nhận 01 phiếu đăng ký sửa chữa tài sản mới với thông tin chi tiết như sau:</p>' +
+      '<table style="width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px;">' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold; width: 38%;">Mã đề nghị:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #002060;">' + (data.id || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Họ và tên cán bộ:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.fullName || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Phòng ban / Đơn vị:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.department || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Tên tài sản / Thiết bị:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">' + (data.assetName || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Tình trạng hỏng hóc:</td><td style="padding: 8px; border: 1px solid #ddd; color: #dc2626;">' + (data.condition || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Đề xuất xử lý:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.proposal || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Mức độ khẩn cấp:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #b91c1c;">' + (data.urgency || 'Trung Bình') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Ngày báo hỏng:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.reportDate || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Thời gian gửi:</td><td style="padding: 8px; border: 1px solid #ddd;">' + timestamp + '</td></tr>' +
+      '</table>' +
+      '<p style="margin-top: 20px;">Trân trọng kính báo Cán bộ Quản lý xem xét, duyệt và phân công xử lý kịp thời.</p>' +
+      '</div>' +
+      '<div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b;">' +
+      'Email tự động từ Ứng dụng Đăng ký Sửa chữa & Mua sắm VietinBank Ninh Bình.' +
+      '</div>' +
+      '</div>';
+
+    MailApp.sendEmail({
+      to: recipientEmail,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+  } catch (err) {
+    Logger.log("Lỗi gửi email sửa chữa: " + err.toString());
+  }
+}
+
+/**
+ * Gửi email thông báo Đề nghị Mua sắm tới Cán bộ Quản lý
+ */
+function sendEmailNotificationForProcurement(recipientEmail, data, timestamp) {
+  if (!recipientEmail || recipientEmail.trim() === "") return;
+  try {
+    var subject = "[VIETINBANK NINH BÌNH] Đề nghị MUA SẮM mới - " + (data.id || "") + " (" + (data.fullName || "") + ")";
+    var htmlBody = '<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; border: 1px solid #002060; border-radius: 8px; overflow: hidden;">' +
+      '<div style="background-color: #002060; padding: 16px; text-align: center; color: #ffffff;">' +
+      '<h2 style="margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px;">VIETINBANK CHI NHÁNH NINH BÌNH</h2>' +
+      '<p style="margin: 4px 0 0 0; font-size: 13px; color: #facc15; font-weight: bold;">THÔNG BÁO ĐỀ NGHỊ MUA SẮM THIẾT BỊ MỚI</p>' +
+      '</div>' +
+      '<div style="padding: 20px; line-height: 1.6; font-size: 14px;">' +
+      '<p>Kính gửi <b>Cán bộ Quản lý / Bộ phận Quản trị Tài sản</b>,</p>' +
+      '<p>Hệ thống vừa tiếp nhận 01 phiếu đăng ký mua sắm thiết bị mới với thông tin chi tiết như sau:</p>' +
+      '<table style="width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px;">' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold; width: 38%;">Mã đề nghị:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #002060;">' + (data.id || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Họ và tên cán bộ:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.fullName || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Phòng ban / Đơn vị:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.department || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Tên thiết bị đề nghị:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">' + (data.equipmentName || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Số lượng:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #15803d;">' + (data.quantity || 1) + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Chủng loại / Quy cách:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.category || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Lý do đề xuất:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.reason || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Mô tả yêu cầu kỹ thuật:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.description || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Thời gian đề xuất mua:</td><td style="padding: 8px; border: 1px solid #ddd;">' + (data.proposedDate || '') + '</td></tr>' +
+      '<tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Thời gian gửi:</td><td style="padding: 8px; border: 1px solid #ddd;">' + timestamp + '</td></tr>' +
+      '</table>' +
+      '<p style="margin-top: 20px;">Trân trọng kính báo Cán bộ Quản lý xem xét, duyệt và thẩm định kế hoạch mua sắm.</p>' +
+      '</div>' +
+      '<div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b;">' +
+      'Email tự động từ Ứng dụng Đăng ký Sửa chữa & Mua sắm VietinBank Ninh Bình.' +
+      '</div>' +
+      '</div>';
+
+    MailApp.sendEmail({
+      to: recipientEmail,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+  } catch (err) {
+    Logger.log("Lỗi gửi email mua sắm: " + err.toString());
+  }
+}
 // Hàm hỗ trợ tạo hoặc định dạng Sheet
 function getOrCreateSheet(ss, name, headers) {
   var sheet = ss.getSheetByName(name);
@@ -181,12 +292,12 @@ export const INSTRUCTIONS_STEPS = [
   {
     step: 1,
     title: 'Tạo Google Sheet mới',
-    content: 'Truy cập drive.google.com -> Tạo mới Google Sheet. Đặt tên file ví dụ: "QuanLyTaiSan_NganHang".',
+    content: 'Truy cập drive.google.com -> Tạo mới Google Sheet. Đặt tên file ví dụ: "QuanLyTaiSan_VietinBank_NinhBinh".',
   },
   {
     step: 2,
     title: 'Thêm 2 Trang tính (Sheets)',
-    content: 'Đổi tên Sheet 1 thành "SuaChua". Tạo thêm 1 Sheet mới và đổi tên thành "MuaSam". (Nếu không tự đổi, Script sẽ tự tạo giúp bạn).',
+    content: 'Đổi tên Sheet 1 thành "SuaChua". Tạo thêm 1 Sheet mới và đổi tên thành "MuaSam". (Nếu chưa tạo, Script sẽ tự tạo giúp bạn).',
   },
   {
     step: 3,
@@ -195,22 +306,22 @@ export const INSTRUCTIONS_STEPS = [
   },
   {
     step: 4,
-    title: 'Dán đoạn mã Code.gs',
-    content: 'Xóa toàn bộ mã mặc định trong file Code.gs, dán đoạn mã Google Apps Script ở khung bên cạnh vào.',
+    title: 'Dán đoạn mã Code.gs & Cấu hình Email',
+    content: 'Xóa toàn bộ mã mặc định trong file Code.gs, dán đoạn mã Google Apps Script ở khung bên cạnh vào. Bạn có thể thay đổi biến DEFAULT_MANAGER_EMAILS ở dòng 9 thành email nhận thông báo của cán bộ quản lý (phân cách bằng dấu phẩy nếu gửi cho nhiều người).',
   },
   {
     step: 5,
     title: 'Triển khai dưới dạng Web App',
-    content: 'Nhấp nút "Triển khai" (Deploy) ở góc trên bên phải -> Chọn "Triển khai mới" (New deployment) -> Chọn biểu tượng bánh răng bên cạnh "Chọn loại", chọn "Ứng dụng Web" (Web app).',
+    content: 'Nhấp nút "Triển khai" (Deploy) ở góc trên bên phải -> Chọn "Triển khai mới" (New deployment) -> Chọn biểu tượng bánh răng, chọn "Ứng dụng Web" (Web app).',
   },
   {
     step: 6,
-    title: 'Phân quyền truy cập',
-    content: 'Mô tả: API Tai San. Thực thi dưới dạng: "Tôi" (Me). Ai có quyền truy cập: "Bất kỳ ai" (Anyone). Sau đó nhấn "Triển khai".',
+    title: 'Phân quyền truy cập & cấp quyền gửi mail',
+    content: 'Mô tả: API Tai San VietinBank. Thực thi dưới dạng: "Tôi" (Me). Ai có quyền truy cập: "Bất kỳ ai" (Anyone). Khi được hỏi cấp quyền truy cập Gmail/Mail, chọn "Đồng ý" (Allow) để Script có thể tự động gửi email thông báo khi có phiếu mới.',
   },
   {
     step: 7,
-    title: 'Sao chép Web App URL',
-    content: 'Cấp quyền cho ứng dụng khi Google hỏi. Sau khi hoàn tất, copy đường link Web App URL (có dạng https://script.google.com/macros/s/.../exec) và dán vào phần Cài đặt của Web App này.',
+    title: 'Sao chép Web App URL & cấu hình ứng dụng',
+    content: 'Sau khi hoàn tất triển khai, copy đường link Web App URL (có dạng https://script.google.com/macros/s/.../exec) và dán vào phần Cài đặt của Web App này.',
   },
 ];

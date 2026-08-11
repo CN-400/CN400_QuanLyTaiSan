@@ -42,4 +42,6 @@ export interface AppSettings {
   webAppUrl: string;
   autoSync: boolean;
   bankBranchName: string;
+  managerEmail?: string;
+  adminPassword?: string;
 }

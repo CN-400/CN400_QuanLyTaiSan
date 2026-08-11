@@ -13,6 +13,7 @@ import { ProcurementForm } from './components/ProcurementForm';
 import { AdminDashboard } from './components/AdminDashboard';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AdminLoginModal } from './components/AdminLoginModal';
 import { Toast } from './components/Toast';
 
 export default function App() {
@@ -21,6 +22,10 @@ export default function App() {
 
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [procurementRequests, setProcurementRequests] = useState<ProcurementRequest[]>([]);
+
+  // Authentication & Admin State
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
 
   // Modals
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
@@ -57,6 +62,14 @@ export default function App() {
     setProcurementRequests(getProcurementRequests());
   };
 
+  const handleOpenSettings = () => {
+    if (isAdminLoggedIn) {
+      setShowSettingsModal(true);
+    } else {
+      setShowAdminLoginModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col antialiased selection:bg-blue-900 selection:text-white">
       {/* Top Banking Navbar */}
@@ -70,9 +83,10 @@ export default function App() {
           }
         }}
         settings={settings}
-        onOpenSettings={() => setShowSettingsModal(true)}
+        onOpenSettings={handleOpenSettings}
         repairCount={repairRequests.filter((r) => r.status === 'Đề xuất').length}
         procurementCount={procurementRequests.filter((p) => p.status === 'Đề xuất').length}
+        isAdminLoggedIn={isAdminLoggedIn}
       />
 
       {/* Main Content Body */}
@@ -140,22 +154,36 @@ export default function App() {
             </button>
             <span>•</span>
             <button
-              onClick={() => setShowSettingsModal(true)}
-              className="hover:text-white transition-colors underline"
+              onClick={handleOpenSettings}
+              className="hover:text-white transition-colors underline flex items-center space-x-1"
             >
-              Cài đặt URL
+              <span>Cài đặt hệ thống</span>
             </button>
           </div>
         </div>
       </footer>
 
       {/* Modals & Toast */}
+      {showAdminLoginModal && (
+        <AdminLoginModal
+          currentPassword={settings.adminPassword}
+          onSuccess={() => {
+            setIsAdminLoggedIn(true);
+            setShowAdminLoginModal(false);
+            setShowSettingsModal(true);
+          }}
+          onClose={() => setShowAdminLoginModal(false)}
+          showToast={showToastHandler}
+        />
+      )}
+
       {showSettingsModal && (
         <SettingsModal
           settings={settings}
           onSaveSettings={handleUpdateSettings}
           onResetData={handleResetData}
           onClose={() => setShowSettingsModal(false)}
+          onLogoutAdmin={() => setIsAdminLoggedIn(false)}
           showToast={showToastHandler}
         />
       )}

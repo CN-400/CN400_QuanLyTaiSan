@@ -9,7 +9,11 @@ export const getAppSettings = (): AppSettings => {
   const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      return {
+        adminPassword: 'admin123',
+        ...parsed,
+      };
     } catch (e) {
       console.error('Failed to parse app settings', e);
     }
@@ -18,6 +22,8 @@ export const getAppSettings = (): AppSettings => {
     webAppUrl: '',
     autoSync: true,
     bankBranchName: 'NGÂN HÀNG TMCP VIETINBANK-CN NINH BÌNH',
+    managerEmail: '',
+    adminPassword: 'admin123',
   };
 };
 
