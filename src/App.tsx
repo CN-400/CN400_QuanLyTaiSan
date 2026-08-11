@@ -123,8 +123,8 @@ export default function App() {
       <footer className="bg-[#001845] text-blue-200 text-xs border-t border-blue-900 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div>
-            <div className="font-bold text-white text-sm">
-              HỆ THỐNG ĐĂNG KÝ SỬA CHỮA & MUA SẮM TÀI SẢN NGÂN HÀNG
+            <div className="font-bold text-white text-sm uppercase tracking-wide">
+              Ứng dụng đăng ký sửa chữa và mua sắm tại CN Vietinbank Ninh Bình
             </div>
             <div className="text-blue-300 text-[11px] mt-0.5">
               Tự động hóa đăng ký, phân công xử lý & lưu trữ dữ liệu trung tâm Google Sheets
