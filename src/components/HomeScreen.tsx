@@ -52,7 +52,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Cổng Thông Tin Nội Bộ Ngân Hàng</span>
+            <span>Sử dụng nội bộ tại Vietinbank Ninh Bình</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight uppercase">

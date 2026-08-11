@@ -169,6 +169,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Helper mappers for Google Sheets data
+  const parseRepairItem = (item: any): RepairRequest => ({
+    id: String(item['Mã đề nghị'] || item.id || '').trim(),
+    fullName: String(item['Họ và tên'] || item.fullName || '').trim(),
+    department: String(item['Phòng ban'] || item.department || '').trim(),
+    assetName: String(item['Tên tài sản'] || item.assetName || '').trim(),
+    condition: String(item['Tình trạng'] || item.condition || '').trim(),
+    reportDate: String(item['Ngày báo hỏng'] || item.reportDate || '').trim(),
+    proposal: String(item['Đề xuất'] || item.proposal || '').trim(),
+    urgency: (item['Mức độ khẩn cấp'] || item.urgency || 'Trung Bình') as any,
+    status: (item['Trạng thái'] || item.status || 'Đề xuất') as RequestStatus,
+    handler: String(item['Cán bộ xử lý'] || item.handler || '').trim(),
+    completionDate: String(item['Ngày hoàn thành'] || item.completionDate || '').trim(),
+    note: String(item['Ghi chú'] || item.note || '').trim(),
+    createdAt: String(item['Thời gian khởi tạo'] || item.createdAt || new Date().toISOString()).trim(),
+  });
+
+  const parseProcurementItem = (item: any): ProcurementRequest => ({
+    id: String(item['Mã đề nghị'] || item.id || '').trim(),
+    fullName: String(item['Họ và tên'] || item.fullName || '').trim(),
+    department: String(item['Phòng ban'] || item.department || '').trim(),
+    equipmentName: String(item['Tên thiết bị'] || item.equipmentName || '').trim(),
+    quantity: Number(item['Số lượng'] || item.quantity || 1) || 1,
+    category: String(item['Chủng loại'] || item.category || '').trim(),
+    reason: String(item['Lý do đề xuất'] || item.reason || '').trim(),
+    description: String(item['Mô tả yêu cầu'] || item.description || '').trim(),
+    requestDate: String(item['Ngày đề nghị'] || item.requestDate || '').trim(),
+    proposedDate: String(item['Đề xuất thời gian mua'] || item.proposedDate || '').trim(),
+    handler: String(item['Cán bộ xử lý'] || item.handler || '').trim(),
+    status: (item['Trạng thái'] || item.status || 'Đề xuất') as RequestStatus,
+    completionDate: String(item['Ngày hoàn thành'] || item.completionDate || '').trim(),
+    note: String(item['Ghi chú'] || item.note || '').trim(),
+    createdAt: String(item['Thời gian khởi tạo'] || item.createdAt || new Date().toISOString()).trim(),
+  });
+
   // Fetch data directly from Google Sheets
   const handleFetchGoogleSheets = async () => {
     if (!settings.webAppUrl) {
@@ -182,9 +217,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setSyncing(false);
 
     if (res.success && res.data) {
-      showToast('Đã tải lại toàn bộ dữ liệu mới nhất từ Google Sheets!', 'success');
+      const rawSuaChua =
+        res.data.suaChua || res.data.repairs || res.data.data?.suaChua || res.data.data?.repairs || [];
+      const rawMuaSam =
+        res.data.muaSam || res.data.procurements || res.data.data?.muaSam || res.data.data?.procurements || [];
+
+      let countRepairs = 0;
+      let countProcurements = 0;
+
+      if (Array.isArray(rawSuaChua)) {
+        const parsedRepairs = rawSuaChua
+          .map(parseRepairItem)
+          .filter((r) => r.id && r.fullName);
+        if (parsedRepairs.length > 0) {
+          setRepairRequests(parsedRepairs);
+          saveRepairRequests(parsedRepairs);
+          countRepairs = parsedRepairs.length;
+        }
+      }
+
+      if (Array.isArray(rawMuaSam)) {
+        const parsedProcurements = rawMuaSam
+          .map(parseProcurementItem)
+          .filter((p) => p.id && p.fullName);
+        if (parsedProcurements.length > 0) {
+          setProcurementRequests(parsedProcurements);
+          saveProcurementRequests(parsedProcurements);
+          countProcurements = parsedProcurements.length;
+        }
+      }
+
+      showToast(
+        `Đã đồng bộ thành công ${countRepairs} đề nghị sửa chữa và ${countProcurements} đề nghị mua sắm từ Google Sheets vào danh sách!`,
+        'success'
+      );
     } else {
-      showToast(res.message, 'error');
+      showToast(res.message || 'Không thể lấy dữ liệu từ Google Sheets.', 'error');
     }
   };
 
